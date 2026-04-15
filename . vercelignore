@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Development
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Documentation
+*.md
+SETUP_INSTRUCTIONS.md
+PROJECT_README.md
+
+# Source files (not needed in production)
+client/src/
+server/
+
+# Config files
+tsconfig.json
+vite.config.ts
+tailwind.config.ts
+postcss.config.js
+prettier.config.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+.manus-logs/
