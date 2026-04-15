@@ -1,0 +1,287 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* Institutional Elegance Color Palette */
+  --primary: #1a3a52; /* Deep Navy */
+  --primary-foreground: #ffffff;
+  --accent: #d4a574; /* Warm Gold */
+  --accent-foreground: #1a3a52;
+  --secondary: #2c5aa0; /* Medium Navy */
+  --secondary-foreground: #ffffff;
+  --sidebar-primary: #1a3a52;
+  --sidebar-primary-foreground: #ffffff;
+  --chart-1: #1a3a52;
+  --chart-2: #2c5aa0;
+  --chart-3: #d4a574;
+  --chart-4: #e8d4b8;
+  --chart-5: #f5ede0;
+  --radius: 0.65rem;
+  --background: oklch(1 0 0);
+  --foreground: #3a3a3a;
+  --card: oklch(1 0 0);
+  --card-foreground: #3a3a3a;
+  --popover: oklch(1 0 0);
+  --popover-foreground: #3a3a3a;
+  --secondary-color: #f5ede0;
+  --secondary-foreground: #3a3a3a;
+  --muted: #e8d4b8;
+  --muted-foreground: #6b5d52;
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: #e0ddd8;
+  --input: #ffffff;
+  --ring: #d4a574;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: #3a3a3a;
+  --sidebar-accent: #d4a574;
+  --sidebar-accent-foreground: #1a3a52;
+  --sidebar-border: #e0ddd8;
+  --sidebar-ring: #d4a574;
+}
+
+.dark {
+  --primary: #1a3a52;
+  --primary-foreground: #ffffff;
+  --background: #0f1419;
+  --foreground: #e8e6e1;
+  --card: #1a2332;
+  --card-foreground: #e8e6e1;
+  --popover: #1a2332;
+  --popover-foreground: #e8e6e1;
+  --secondary: #2c5aa0;
+  --secondary-foreground: #ffffff;
+  --muted: #3a4a5a;
+  --muted-foreground: #b8b0a8;
+  --accent: #d4a574;
+  --accent-foreground: #1a3a52;
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: #2a3a4a;
+  --input: #1a2332;
+  --ring: #d4a574;
+  --chart-1: #1a3a52;
+  --chart-2: #2c5aa0;
+  --chart-3: #d4a574;
+  --chart-4: #e8d4b8;
+  --chart-5: #f5ede0;
+  --sidebar: #1a2332;
+  --sidebar-foreground: #e8e6e1;
+  --sidebar-accent: #d4a574;
+  --sidebar-accent-foreground: #1a3a52;
+  --sidebar-border: #2a3a4a;
+  --sidebar-ring: #d4a574;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+
+  /* Typography System - Institutional Elegance */
+  h1 {
+    @apply font-serif text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply font-serif text-3xl md:text-4xl font-bold tracking-tight;
+  }
+
+  h3 {
+    @apply font-serif text-2xl md:text-3xl font-semibold tracking-tight;
+  }
+
+  h4 {
+    @apply font-serif text-xl md:text-2xl font-semibold;
+  }
+
+  h5 {
+    @apply font-sans text-lg font-semibold;
+  }
+
+  h6 {
+    @apply font-sans text-base font-semibold;
+  }
+
+  p {
+    @apply font-sans text-base leading-relaxed;
+  }
+
+  /* Gold accent line dividers */
+  .divider-gold {
+    @apply border-t-2 border-accent;
+  }
+
+  /* Subtle gold underline for emphasis */
+  .underline-gold {
+    @apply border-b-2 border-accent pb-1;
+  }
+
+  /* Embossed card style */
+  .card-embossed {
+    @apply bg-white rounded-lg shadow-sm border border-border/50 hover:shadow-md transition-shadow duration-300;
+  }
+
+  /* Section spacing */
+  .section-spacing {
+    @apply py-16 md:py-24 lg:py-32;
+  }
+}
+
+@layer components {
+  /**
+   * Custom container utility that centers content and adds responsive padding.
+   * Institutional Elegance Design: Asymmetric layouts with generous whitespace
+   */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem; /* 16px - mobile padding */
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem; /* 32px - desktop padding */
+      padding-right: 2rem;
+      max-width: 1280px; /* Standard content width */
+    }
+  }
+
+  /* Institutional button styles */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors duration-300 inline-block;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-primary border-2 border-primary px-8 py-3 rounded-lg font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-300 inline-block;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-accent-foreground px-8 py-3 rounded-lg font-semibold hover:bg-accent/90 transition-colors duration-300 inline-block;
+  }
+
+  /* Smooth entrance animation */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  /* Gold accent hover effect */
+  @keyframes goldUnderline {
+    from {
+      width: 0;
+    }
+    to {
+      width: 100%;
+    }
+  }
+
+  .hover-gold-underline {
+    @apply relative pb-2;
+  }
+
+  .hover-gold-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-1 bg-accent transition-all duration-300;
+  }
+
+  .hover-gold-underline:hover::after {
+    @apply w-full;
+  }
+}
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Source+Sans+Pro:wght@400;500;600;700&display=swap');
+
+/* Font family definitions */
+:root {
+  --font-serif: 'Playfair Display', 'Lora', serif;
+  --font-sans: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+}
