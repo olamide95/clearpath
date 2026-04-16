@@ -41,6 +41,11 @@ export default function Footer() {
                 </a>
               </li>
               <li>
+                <a href="/contact" className="text-primary-foreground/80 hover:text-accent transition-colors block">
+                  Contact Us
+                </a>
+              </li>
+              <li>
                 <a href="/admin" className="text-primary-foreground/80 hover:text-accent transition-colors block">
                   Admin Dashboard
                 </a>
