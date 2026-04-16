@@ -1,24 +1,40 @@
 // Application Form Page
-// Design: Institutional Elegance - Clean, professional form with validation
-// Features: Form validation, Firestore integration, success message, text inputs for state/LGA
+// Design: Institutional Elegance - Professional scholarship application form
 
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { submitApplication } from "@/lib/firebase";
-import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDGtwrqcgRNPySWGVNX4PInWCOYJ8Y2Qak",
+  authDomain: "clearpath-f099c.firebaseapp.com",
+  projectId: "clearpath-f099c",
+  storageBucket: "clearpath-f099c.firebasestorage.app",
+  messagingSenderId: "1049801546802",
+  appId: "1:1049801546802:web:aea2c07295e878120db02b",
+  measurementId: "G-4BB4E2VCNS"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 interface FormData {
   fullName: string;
-  phoneNumber: string;
   emailAddress: string;
-  currentSchool: string;
-  yearsToGraduation: string;
+  phoneNumber: string;
+  school: string;
+  graduationYear: string;
   age: string;
-  gradeClass: string;
+  cgpa: string;
   stateOfOrigin: string;
   lga: string;
+  motivation: string;
 }
 
 interface FormErrors {
@@ -26,319 +42,343 @@ interface FormErrors {
 }
 
 export default function ApplicationForm() {
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
-    phoneNumber: "",
     emailAddress: "",
-    currentSchool: "",
-    yearsToGraduation: "",
+    phoneNumber: "",
+    school: "",
+    graduationYear: "",
     age: "",
-    gradeClass: "",
+    cgpa: "",
     stateOfOrigin: "",
-    lga: ""
+    lga: "",
+    motivation: ""
   });
-
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
-  const [submitMessage, setSubmitMessage] = useState("");
 
-  // Validate email
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  // Validate form
-  const validateForm = () => {
+  const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
-    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
-    if (!formData.emailAddress.trim()) newErrors.emailAddress = "Email is required";
-    if (!validateEmail(formData.emailAddress)) newErrors.emailAddress = "Invalid email format";
-    if (!formData.currentSchool.trim()) newErrors.currentSchool = "Current school is required";
-    if (!formData.yearsToGraduation.trim()) newErrors.yearsToGraduation = "Years to graduation is required";
-    if (!formData.age.trim()) newErrors.age = "Age is required";
-    if (formData.age && isNaN(Number(formData.age))) newErrors.age = "Age must be a number";
-    if (!formData.gradeClass.trim()) newErrors.gradeClass = "Grade/Class is required";
-    if (!formData.stateOfOrigin.trim()) newErrors.stateOfOrigin = "State of origin is required";
-    if (!formData.lga.trim()) newErrors.lga = "LGA is required";
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    }
+
+    if (!formData.emailAddress.trim()) {
+      newErrors.emailAddress = "Email address is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.emailAddress)) {
+      newErrors.emailAddress = "Please enter a valid email address";
+    }
+
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = "Phone number is required";
+    }
+
+    if (!formData.school.trim()) {
+      newErrors.school = "School name is required";
+    }
+
+    if (!formData.graduationYear.trim()) {
+      newErrors.graduationYear = "Graduation year is required";
+    } else if (!/^\d{4}$/.test(formData.graduationYear)) {
+      newErrors.graduationYear = "Please enter a valid year (e.g., 2026)";
+    }
+
+    if (!formData.age.trim()) {
+      newErrors.age = "Age is required";
+    } else if (isNaN(Number(formData.age)) || Number(formData.age) < 16 || Number(formData.age) > 100) {
+      newErrors.age = "Please enter a valid age";
+    }
+
+    if (!formData.cgpa) {
+      newErrors.cgpa = "CGPA is required";
+    }
+
+    if (!formData.stateOfOrigin.trim()) {
+      newErrors.stateOfOrigin = "State of origin is required";
+    }
+
+    if (!formData.lga.trim()) {
+      newErrors.lga = "LGA is required";
+    }
+
+    if (!formData.motivation.trim()) {
+      newErrors.motivation = "Motivation is required";
+    } else if (formData.motivation.trim().split(/\s+/).length < 200) {
+      newErrors.motivation = "Motivation must be at least 200 words";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle input change
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error for this field
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error for this field when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
+      setErrors(prev => ({
+        ...prev,
+        [name]: ""
+      }));
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
       return;
     }
 
     setIsSubmitting(true);
-    setSubmitStatus("idle");
 
     try {
-      const result = await submitApplication({
+      await addDoc(collection(db, "applications"), {
         fullName: formData.fullName,
-        phoneNumber: formData.phoneNumber,
         emailAddress: formData.emailAddress,
-        currentSchool: formData.currentSchool,
-        yearsToGraduation: formData.yearsToGraduation,
+        phoneNumber: formData.phoneNumber,
+        school: formData.school,
+        graduationYear: formData.graduationYear,
         age: Number(formData.age),
-        gradeClass: formData.gradeClass,
+        cgpa: formData.cgpa,
         stateOfOrigin: formData.stateOfOrigin,
-        lga: formData.lga
+        lga: formData.lga,
+        motivation: formData.motivation,
+        createdAt: serverTimestamp()
       });
 
-      if (result.success) {
-        setSubmitStatus("success");
-        setSubmitMessage("Your application has been submitted successfully! We will review it and contact you soon.");
-        setFormData({
-          fullName: "",
-          phoneNumber: "",
-          emailAddress: "",
-          currentSchool: "",
-          yearsToGraduation: "",
-          age: "",
-          gradeClass: "",
-          stateOfOrigin: "",
-          lga: ""
-        });
-        // Redirect after 3 seconds
-        setTimeout(() => navigate("/"), 3000);
-      } else {
-        setSubmitStatus("error");
-        setSubmitMessage("Failed to submit application. Please try again.");
-      }
+      toast.success("Application submitted successfully!");
+      
+      // Reset form
+      setFormData({
+        fullName: "",
+        emailAddress: "",
+        phoneNumber: "",
+        school: "",
+        graduationYear: "",
+        age: "",
+        cgpa: "",
+        stateOfOrigin: "",
+        lga: "",
+        motivation: ""
+      });
+
+      // Redirect to home after 2 seconds
+      setTimeout(() => {
+        setLocation("/");
+      }, 2000);
     } catch (error) {
-      setSubmitStatus("error");
-      setSubmitMessage("An error occurred. Please try again later.");
+      console.error("Error submitting application:", error);
+      toast.error("Failed to submit application. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const wordCount = formData.motivation.trim().split(/\s+/).filter(word => word.length > 0).length;
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
+
       <main className="flex-1">
-        <section className="py-16 md:py-24">
-          <div className="container max-w-2xl">
-            {/* Page Header */}
-            <div className="mb-12">
-              <h1 className="text-primary mb-4">Scholarship Application Form</h1>
-              <p className="text-foreground/70 text-lg">
-                Complete this form to apply for our fully funded UK scholarship program. All fields are required.
-              </p>
-            </div>
+        <div className="container py-12 md:py-16">
+          {/* Back Button */}
+          <button
+            onClick={() => setLocation("/")}
+            className="flex items-center gap-2 text-primary hover:text-accent mb-8 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </button>
 
-            {/* Success Message */}
-            {submitStatus === "success" && (
-              <div className="mb-8 p-6 bg-green-50 border border-green-200 rounded-lg flex gap-4">
-                <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-green-900 mb-1">Application Submitted</h3>
-                  <p className="text-green-800">{submitMessage}</p>
-                </div>
-              </div>
-            )}
+          {/* Form Header */}
+          <div className="max-w-2xl mx-auto mb-12">
+            <h1 className="font-serif text-4xl font-bold text-primary mb-4">
+              Scholarship Application
+            </h1>
+            <p className="text-foreground/70 text-lg">
+              Complete this form to apply for our fully funded UK scholarship opportunity. All fields are required.
+            </p>
+          </div>
 
-            {/* Error Message */}
-            {submitStatus === "error" && (
-              <div className="mb-8 p-6 bg-red-50 border border-red-200 rounded-lg flex gap-4">
-                <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-red-900 mb-1">Submission Error</h3>
-                  <p className="text-red-800">{submitMessage}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Form */}
+          {/* Application Form */}
+          <div className="max-w-2xl mx-auto bg-white rounded-lg border border-border p-8 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Full Name */}
               <div>
-                <label htmlFor="fullName" className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   Full Name *
                 </label>
                 <input
                   type="text"
-                  id="fullName"
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.fullName ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
                   placeholder="Enter your full name"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
                 {errors.fullName && <p className="text-red-600 text-sm mt-1">{errors.fullName}</p>}
               </div>
 
               {/* Email Address */}
               <div>
-                <label htmlFor="emailAddress" className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   Email Address *
                 </label>
                 <input
                   type="email"
-                  id="emailAddress"
                   name="emailAddress"
                   value={formData.emailAddress}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.emailAddress ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
                   placeholder="your.email@example.com"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
                 {errors.emailAddress && <p className="text-red-600 text-sm mt-1">{errors.emailAddress}</p>}
               </div>
 
               {/* Phone Number */}
               <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   Phone Number *
                 </label>
                 <input
                   type="tel"
-                  id="phoneNumber"
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.phoneNumber ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
                   placeholder="+234 (0) 123 456 7890"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
                 {errors.phoneNumber && <p className="text-red-600 text-sm mt-1">{errors.phoneNumber}</p>}
               </div>
 
-              {/* Current School */}
+              {/* School */}
               <div>
-                <label htmlFor="currentSchool" className="block text-sm font-semibold text-foreground mb-2">
-                  Current School *
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  School (Current or Graduated From) *
                 </label>
                 <input
                   type="text"
-                  id="currentSchool"
-                  name="currentSchool"
-                  value={formData.currentSchool}
+                  name="school"
+                  value={formData.school}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.currentSchool ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
-                  placeholder="Name of your school/institution"
+                  placeholder="e.g., University of Lagos"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.currentSchool && <p className="text-red-600 text-sm mt-1">{errors.currentSchool}</p>}
+                {errors.school && <p className="text-red-600 text-sm mt-1">{errors.school}</p>}
               </div>
 
-              {/* Years to Graduation */}
+              {/* Graduation Year */}
               <div>
-                <label htmlFor="yearsToGraduation" className="block text-sm font-semibold text-foreground mb-2">
-                  Years to Graduation *
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  Graduation Year *
                 </label>
                 <input
                   type="text"
-                  id="yearsToGraduation"
-                  name="yearsToGraduation"
-                  value={formData.yearsToGraduation}
+                  name="graduationYear"
+                  value={formData.graduationYear}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.yearsToGraduation ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
-                  placeholder="e.g., 2 years"
+                  placeholder="e.g., 2026"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.yearsToGraduation && <p className="text-red-600 text-sm mt-1">{errors.yearsToGraduation}</p>}
+                {errors.graduationYear && <p className="text-red-600 text-sm mt-1">{errors.graduationYear}</p>}
               </div>
 
               {/* Age */}
               <div>
-                <label htmlFor="age" className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   Age *
                 </label>
                 <input
                   type="number"
-                  id="age"
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.age ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
                   placeholder="Enter your age"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
                 {errors.age && <p className="text-red-600 text-sm mt-1">{errors.age}</p>}
               </div>
 
-              {/* Grade/Class */}
+              {/* CGPA */}
               <div>
-                <label htmlFor="gradeClass" className="block text-sm font-semibold text-foreground mb-2">
-                  Grade / Class *
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  CGPA *
                 </label>
-                <input
-                  type="text"
-                  id="gradeClass"
-                  name="gradeClass"
-                  value={formData.gradeClass}
+                <select
+                  name="cgpa"
+                  value={formData.cgpa}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.gradeClass ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
-                  placeholder="e.g., SS3, Year 12"
-                />
-                {errors.gradeClass && <p className="text-red-600 text-sm mt-1">{errors.gradeClass}</p>}
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
+                >
+                  <option value="">Select your CGPA classification</option>
+                  <option value="First Class">First Class</option>
+                  <option value="Second Class Upper">Second Class Upper</option>
+                  <option value="Second Class Lower">Second Class Lower</option>
+                   <option value="Second Class Lower">Third class</option>
+
+                </select>
+                {errors.cgpa && <p className="text-red-600 text-sm mt-1">{errors.cgpa}</p>}
               </div>
 
               {/* State of Origin */}
               <div>
-                <label htmlFor="stateOfOrigin" className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   State of Origin *
                 </label>
                 <input
                   type="text"
-                  id="stateOfOrigin"
                   name="stateOfOrigin"
                   value={formData.stateOfOrigin}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.stateOfOrigin ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
-                  placeholder="e.g., Lagos, Abuja"
+                  placeholder="e.g., Lagos"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
                 {errors.stateOfOrigin && <p className="text-red-600 text-sm mt-1">{errors.stateOfOrigin}</p>}
               </div>
 
               {/* LGA */}
               <div>
-                <label htmlFor="lga" className="block text-sm font-semibold text-foreground mb-2">
-                  LGA (Local Government Area) *
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  Local Government Area (LGA) *
                 </label>
                 <input
                   type="text"
-                  id="lga"
                   name="lga"
                   value={formData.lga}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all ${
-                    errors.lga ? "border-red-500 focus:ring-red-500" : "border-border focus:border-accent"
-                  }`}
-                  placeholder="Enter your LGA"
+                  placeholder="e.g., Ikeja"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
                 {errors.lga && <p className="text-red-600 text-sm mt-1">{errors.lga}</p>}
+              </div>
+
+              {/* Motivation Essay */}
+              <div>
+                <div className="flex justify-between items-baseline mb-2">
+                  <label className="block text-sm font-semibold text-foreground">
+                    Why do you want this scholarship? *
+                  </label>
+                  <span className={`text-xs ${wordCount < 2000 ? "text-red-600" : "text-green-600"}`}>
+                    {wordCount} / 20000 words
+                  </span>
+                </div>
+                <textarea
+                  name="motivation"
+                  value={formData.motivation}
+                  onChange={handleChange}
+                  placeholder="Write at least 200 words explaining why you want this scholarship, your academic goals, and how this opportunity will help you achieve them."
+                  rows={8}
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all resize-none"
+                />
+                {errors.motivation && <p className="text-red-600 text-sm mt-1">{errors.motivation}</p>}
               </div>
 
               {/* Submit Button */}
@@ -365,8 +405,9 @@ export default function ApplicationForm() {
               </p>
             </form>
           </div>
-        </section>
+        </div>
       </main>
+
       <Footer />
     </div>
   );
