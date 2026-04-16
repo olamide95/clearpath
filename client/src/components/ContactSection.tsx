@@ -12,12 +12,7 @@ export default function ContactSection() {
       value: "info@clearpathscholar.com",
       href: "mailto:info@clearpathscholar.com"
     },
-    {
-      icon: Phone,
-      label: "Phone",
-      value: "+44 (0) 123 456 7890",
-      href: "tel:+441234567890"
-    },
+   
     {
       icon: MapPin,
       label: "Address",
