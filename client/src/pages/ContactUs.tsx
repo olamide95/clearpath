@@ -175,35 +175,8 @@ export default function ContactUs() {
                 </div>
               </div>
 
-              {/* Phone */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-accent/20">
-                    <Phone className="h-6 w-6 text-accent" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Phone</h3>
-                  <a href="tel:+441234567890" className="text-foreground/70 hover:text-accent transition-colors">
-                    +44 (0) 123 456 7890
-                  </a>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-accent/20">
-                    <MapPin className="h-6 w-6 text-accent" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Address</h3>
-                  <p className="text-foreground/70">
-                    London, United Kingdom
-                  </p>
-                </div>
-              </div>
+          
+             
 
               {/* Hours */}
               <div className="flex gap-4">

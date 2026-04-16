@@ -45,11 +45,7 @@ export default function Footer() {
                   Contact Us
                 </a>
               </li>
-              <li>
-                <a href="/admin" className="text-primary-foreground/80 hover:text-accent transition-colors block">
-                  Admin Dashboard
-                </a>
-              </li>
+             
             </ul>
           </div>
 
@@ -63,12 +59,7 @@ export default function Footer() {
                   info@clearpathscholar.com
                 </a>
               </div>
-              <div className="flex items-start gap-3">
-                <Phone className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                <a href="tel:+441234567890" className="text-primary-foreground/80 hover:text-accent transition-colors text-sm block">
-                  +44 (0) 123 456 7890
-                </a>
-              </div>
+             
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
                 <p className="text-primary-foreground/80 text-sm">
