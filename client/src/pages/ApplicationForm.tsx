@@ -1,16 +1,18 @@
-// Application Form Page
-// Design: Institutional Elegance - Professional scholarship application form
+// pages/ApplicationForm.tsx
+// Scholarship Application Form
+// EmailJS: sends confirmation email to applicant after successful Firestore submission
 
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import emailjs from "@emailjs/browser";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-// Firebase configuration
+// ─── Firebase Configuration ───────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDGtwrqcgRNPySWGVNX4PInWCOYJ8Y2Qak",
   authDomain: "clearpath-f099c.firebaseapp.com",
@@ -24,6 +26,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// ─── EmailJS Configuration ────────────────────────────────────────────────────
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface FormData {
   fullName: string;
   emailAddress: string;
@@ -41,6 +49,7 @@ interface FormErrors {
   [key: string]: string;
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function ApplicationForm() {
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +67,7 @@ export default function ApplicationForm() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // ─── Validation ─────────────────────────────────────────────────────────────
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -88,7 +98,7 @@ export default function ApplicationForm() {
     if (!formData.age.trim()) {
       newErrors.age = "Age is required";
     } else if (isNaN(Number(formData.age)) || Number(formData.age) < 16 || Number(formData.age) > 100) {
-      newErrors.age = "Please enter a valid age";
+      newErrors.age = "Please enter a valid age (16–100)";
     }
 
     if (!formData.cgpa) {
@@ -104,8 +114,8 @@ export default function ApplicationForm() {
     }
 
     if (!formData.motivation.trim()) {
-      newErrors.motivation = "Motivation is required";
-    } else if (formData.motivation.trim().split(/\s+/).length < 200) {
+      newErrors.motivation = "Motivation essay is required";
+    } else if (formData.motivation.trim().split(/\s+/).filter(w => w.length > 0).length < 200) {
       newErrors.motivation = "Motivation must be at least 200 words";
     }
 
@@ -113,26 +123,56 @@ export default function ApplicationForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  // ─── Input Handler ──────────────────────────────────────────────────────────
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error for this field when user starts typing
+    setFormData(prev => ({ ...prev, [name]: value }));
+
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
+      setErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
 
+  // ─── Send Confirmation Email ────────────────────────────────────────────────
+  const sendApplicantConfirmationEmail = async () => {
+    await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      {
+        to_email: formData.emailAddress,
+        to_name: formData.fullName,
+        subject: "Application Received Successfully",
+        message: `Dear ${formData.fullName},
+
+Thank you for submitting your scholarship application.
+
+We have received your application successfully. Our team will review your details and contact you if further information is required.
+
+Application Summary:
+Full Name: ${formData.fullName}
+Email: ${formData.emailAddress}
+Phone Number: ${formData.phoneNumber}
+School: ${formData.school}
+Graduation Year: ${formData.graduationYear}
+CGPA Classification: ${formData.cgpa}
+State of Origin: ${formData.stateOfOrigin}
+LGA: ${formData.lga}
+
+Best regards,
+The ClearPath Team`
+      },
+      EMAILJS_PUBLIC_KEY
+    );
+  };
+
+  // ─── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fix the errors in the form");
+      toast.error("Please fix the errors in the form before submitting");
       return;
     }
 
@@ -153,9 +193,14 @@ export default function ApplicationForm() {
         createdAt: serverTimestamp()
       });
 
-      toast.success("Application submitted successfully!");
-      
-      // Reset form
+      try {
+        await sendApplicantConfirmationEmail();
+        toast.success("Application submitted successfully! A confirmation email has been sent to you.");
+      } catch (emailError) {
+        console.error("Application saved, but confirmation email failed:", emailError);
+        toast.success("Application submitted successfully! However, confirmation email could not be sent.");
+      }
+
       setFormData({
         fullName: "",
         emailAddress: "",
@@ -169,10 +214,7 @@ export default function ApplicationForm() {
         motivation: ""
       });
 
-      // Redirect to home after 2 seconds
-      setTimeout(() => {
-        setLocation("/");
-      }, 2000);
+      setTimeout(() => setLocation("/"), 2000);
     } catch (error) {
       console.error("Error submitting application:", error);
       toast.error("Failed to submit application. Please try again.");
@@ -181,14 +223,20 @@ export default function ApplicationForm() {
     }
   };
 
-  const wordCount = formData.motivation.trim().split(/\s+/).filter(word => word.length > 0).length;
+  // ─── Word count for motivation ───────────────────────────────────────────────
+  const wordCount = formData.motivation
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0).length;
 
+  // ─── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
 
       <main className="flex-1">
         <div className="container py-12 md:py-16">
+
           {/* Back Button */}
           <button
             onClick={() => setLocation("/")}
@@ -204,13 +252,15 @@ export default function ApplicationForm() {
               Scholarship Application
             </h1>
             <p className="text-foreground/70 text-lg">
-              Complete this form to apply for our fully funded UK scholarship opportunity. All fields are required.
+              Complete this form to apply for our fully funded UK scholarship opportunity.
+              All fields are required.
             </p>
           </div>
 
-          {/* Application Form */}
+          {/* Form Card */}
           <div className="max-w-2xl mx-auto bg-white rounded-lg border border-border p-8 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-6">
+
               {/* Full Name */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-2">
@@ -224,7 +274,9 @@ export default function ApplicationForm() {
                   placeholder="Enter your full name"
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.fullName && <p className="text-red-600 text-sm mt-1">{errors.fullName}</p>}
+                {errors.fullName && (
+                  <p className="text-red-600 text-sm mt-1">{errors.fullName}</p>
+                )}
               </div>
 
               {/* Email Address */}
@@ -240,7 +292,9 @@ export default function ApplicationForm() {
                   placeholder="your.email@example.com"
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.emailAddress && <p className="text-red-600 text-sm mt-1">{errors.emailAddress}</p>}
+                {errors.emailAddress && (
+                  <p className="text-red-600 text-sm mt-1">{errors.emailAddress}</p>
+                )}
               </div>
 
               {/* Phone Number */}
@@ -256,7 +310,9 @@ export default function ApplicationForm() {
                   placeholder="+234 (0) 123 456 7890"
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.phoneNumber && <p className="text-red-600 text-sm mt-1">{errors.phoneNumber}</p>}
+                {errors.phoneNumber && (
+                  <p className="text-red-600 text-sm mt-1">{errors.phoneNumber}</p>
+                )}
               </div>
 
               {/* School */}
@@ -272,7 +328,9 @@ export default function ApplicationForm() {
                   placeholder="e.g., University of Lagos"
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.school && <p className="text-red-600 text-sm mt-1">{errors.school}</p>}
+                {errors.school && (
+                  <p className="text-red-600 text-sm mt-1">{errors.school}</p>
+                )}
               </div>
 
               {/* Graduation Year */}
@@ -288,7 +346,9 @@ export default function ApplicationForm() {
                   placeholder="e.g., 2026"
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.graduationYear && <p className="text-red-600 text-sm mt-1">{errors.graduationYear}</p>}
+                {errors.graduationYear && (
+                  <p className="text-red-600 text-sm mt-1">{errors.graduationYear}</p>
+                )}
               </div>
 
               {/* Age */}
@@ -302,30 +362,35 @@ export default function ApplicationForm() {
                   value={formData.age}
                   onChange={handleChange}
                   placeholder="Enter your age"
+                  min={16}
+                  max={100}
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.age && <p className="text-red-600 text-sm mt-1">{errors.age}</p>}
+                {errors.age && (
+                  <p className="text-red-600 text-sm mt-1">{errors.age}</p>
+                )}
               </div>
 
               {/* CGPA */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-2">
-                  CGPA *
+                  CGPA Classification *
                 </label>
                 <select
                   name="cgpa"
                   value={formData.cgpa}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all bg-white"
                 >
                   <option value="">Select your CGPA classification</option>
                   <option value="First Class">First Class</option>
                   <option value="Second Class Upper">Second Class Upper</option>
                   <option value="Second Class Lower">Second Class Lower</option>
-                   <option value="Second Class Lower">Third class</option>
-
+                  <option value="Third Class">Third Class</option>
                 </select>
-                {errors.cgpa && <p className="text-red-600 text-sm mt-1">{errors.cgpa}</p>}
+                {errors.cgpa && (
+                  <p className="text-red-600 text-sm mt-1">{errors.cgpa}</p>
+                )}
               </div>
 
               {/* State of Origin */}
@@ -341,7 +406,9 @@ export default function ApplicationForm() {
                   placeholder="e.g., Lagos"
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.stateOfOrigin && <p className="text-red-600 text-sm mt-1">{errors.stateOfOrigin}</p>}
+                {errors.stateOfOrigin && (
+                  <p className="text-red-600 text-sm mt-1">{errors.stateOfOrigin}</p>
+                )}
               </div>
 
               {/* LGA */}
@@ -357,7 +424,9 @@ export default function ApplicationForm() {
                   placeholder="e.g., Ikeja"
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                 />
-                {errors.lga && <p className="text-red-600 text-sm mt-1">{errors.lga}</p>}
+                {errors.lga && (
+                  <p className="text-red-600 text-sm mt-1">{errors.lga}</p>
+                )}
               </div>
 
               {/* Motivation Essay */}
@@ -366,8 +435,12 @@ export default function ApplicationForm() {
                   <label className="block text-sm font-semibold text-foreground">
                     Why do you want this scholarship? *
                   </label>
-                  <span className={`text-xs ${wordCount < 2000 ? "text-red-600" : "text-green-600"}`}>
-                    {wordCount} / 20000 words
+                  <span
+                    className={`text-xs font-medium ${
+                      wordCount >= 200 ? "text-green-600" : "text-red-500"
+                    }`}
+                  >
+                    {wordCount} / 200 words minimum
                   </span>
                 </div>
                 <textarea
@@ -378,11 +451,13 @@ export default function ApplicationForm() {
                   rows={8}
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all resize-none"
                 />
-                {errors.motivation && <p className="text-red-600 text-sm mt-1">{errors.motivation}</p>}
+                {errors.motivation && (
+                  <p className="text-red-600 text-sm mt-1">{errors.motivation}</p>
+                )}
               </div>
 
               {/* Submit Button */}
-              <div className="pt-6">
+              <div className="pt-4">
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -391,7 +466,7 @@ export default function ApplicationForm() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Submitting...
+                      Submitting Application...
                     </>
                   ) : (
                     "Submit Application"
@@ -400,9 +475,11 @@ export default function ApplicationForm() {
               </div>
 
               {/* Privacy Note */}
-              <p className="text-xs text-foreground/60 text-center">
+              <p className="text-xs text-foreground/60 text-center pt-2">
                 By submitting this form, you agree to our privacy policy and terms of service.
+                A confirmation email will be sent to the address you provided.
               </p>
+
             </form>
           </div>
         </div>
